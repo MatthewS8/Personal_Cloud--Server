@@ -18,7 +18,7 @@ const connectWithRetry = () => {
     `, (err, res) => {
         if (err) {
         console.error( "create table error ", err);
-        setTimeout(connectWithRetry, 1000);
+        setTimeout(connectWithRetry, 3000);
         } else {
             console.log('Users table is ready');
         }
