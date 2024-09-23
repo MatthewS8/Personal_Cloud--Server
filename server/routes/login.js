@@ -2,15 +2,14 @@ const express = require('express');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const bcrypt = require('bcryptjs');
-
-const pool = require('../db');
+const User = require('../models/user');
+const { where } = require('sequelize');
 
 const tokens = new Map();
 router.post('/', async (req, res) => {  
   const { username, password } = req.body;
   try {
-        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-        const user = result.rows[0];
+        const user = await User.findOne({where: {username}});
         if (!user) {
             return res.status(400).send('Invalid username or password');
         }
