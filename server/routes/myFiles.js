@@ -1,19 +1,21 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
-// this should be where you have your list of files and can upload, download something or create a share link
-router.get('/', async (req, res) => {  
-    const token = req.headers.authorization.split(' ')[1];
-    if (!token) {
-        return res.status(401).send('Access denied');
-    }
+const File = require('../models/file');
+
+const authenticateToken = require('../middlewares/authenticatorHandler');
+
+router.get('/', authenticateToken, async (req, res) => {  
     try {
-        const decoded = jwt.verify(token, 'secretkey');
-        req.userId = decoded.userId;
-        req.username = decoded.username;
-        console.log("decoded ", decoded);
-        res.send('Hello World');
+        const fileList = await File.findAll({ where: { ownerId: req.userId } });
+
+        if (fileList.length === 0) {
+            res.json({});
+        } else {
+            console.log("Found these files");
+            res.json(fileList);
+        }
     } catch (err) {
+        console.error('Error on validating token: ', err);
         res.status(400).send('Invalid token');
     }
 });

@@ -1,11 +1,13 @@
 const express = require('express');
+const { KEY_TOKEN } = require('../config/config');
 const router = express.Router();
+
+const User = require('../models/user');
 
 router.post('/', async (req, res) => {  
   const { username, password } = req.body;
   try {
-        const result = await pool.query('SELECT * FROM users WHERE username = $1', [username]);
-        const user = result.rows[0];
+        const user = await User.findOne({where: {username}});
         if (!user) {
             return res.status(400).send('Invalid username or password');
         }
@@ -13,8 +15,8 @@ router.post('/', async (req, res) => {
         if (!isMatch) {
             return res.status(400).send('Invalid username or password');
         }
-        payload = {userId: user.id, username: user.username, loginTime: Date.now()}
-        const token = jwt.sign(payload, 'secretkey');
+        payload = {userId: user.userID, username: user.username, loginTime: Date.now()}
+        const token = jwt.sign(payload, KEY_TOKEN);
         tokens.set(user.id, payload);
         res.send({ token });
     } catch (err) {

@@ -8,7 +8,6 @@ router.get('/', (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  console.log(req.body);
   const { username, password } = req.body;
   const hashedPassword = await bcrypt.hash(password, 10);
   try {

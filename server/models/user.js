@@ -1,5 +1,5 @@
 const { DataTypes } = require('sequelize');
-const sequelize = require('../sequelize');
+const sequelize = require('../config/sequelize');
 
 const User = sequelize.define('User', {
     userID: {
@@ -15,8 +15,8 @@ const User = sequelize.define('User', {
     password: {
         type: DataTypes.STRING,
         allowNull: false,
-    },
-});
+    }
+}, { timestamps: false });
 
 
 // Synchronize the User model with the database
