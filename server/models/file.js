@@ -13,6 +13,12 @@ const File = sequelize.define('File', {
         allowNull: false,
         unique: true,
     },
+    uuid: {
+        type: DataTypes.UUID,
+        defaultValue: DataTypes.UUIDV4,
+        allowNull: false,
+        unique: true
+    },
     createdAt: {
         type: DataTypes.DATE,
         allowNull: false,
@@ -31,7 +37,5 @@ const File = sequelize.define('File', {
     }
 });
 
-// User.hasMany(File, { foreignKey: 'userID', onDelete: 'CASCADE' });
-// File.belongsTo(User, { foreignKey: 'userID', onDelete: 'CASCADE' });
 
 module.exports = File;
