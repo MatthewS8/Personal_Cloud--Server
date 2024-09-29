@@ -8,6 +8,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      - NODE_ENV=development
       - DB_HOST=postgres
       - DB_USER=root
       - DB_PASSWORD=dba
@@ -15,6 +16,12 @@ services:
       - DB_PORT=5432
     volumes:
       - ./uploads:/app/uploads
+    command: >
+      sh -c "
+      npx sequelize-cli db:migrate &&
+      npx sequelize-cli db:seed:all &&
+      node app.js
+      "
 
   postgres:
     image: postgres:latest
@@ -24,6 +31,8 @@ services:
       POSTGRES_DB: cloudDB
     ports:
       - "5432:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U root -d cloudDB"]
       interval: 10s

@@ -13,6 +13,8 @@ const adminRouter = require('./routes/admin');
 const loginRouter = require('./routes/login');
 const filesRouter = require('./routes/myFiles');
 const uploadRouter = require('./routes/upload');
+const changePasswordRouter = require('./routes/password_change');
+
 
 app.use('/', indexRouter);
 app.use('/register', registerRouter);
@@ -20,6 +22,7 @@ app.use('/login', loginRouter);
 app.use('/admin', adminRouter);
 app.use('/myFiles', filesRouter);
 app.use('/uploads', uploadRouter);
+app.use('/password_change', changePasswordRouter);
 
 
 

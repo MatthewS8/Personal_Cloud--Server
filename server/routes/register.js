@@ -9,7 +9,8 @@ router.get('/', (req, res) => {
 
 router.post('/', async (req, res) => {
   const { username, password } = req.body;
-  const hashedPassword = await bcrypt.hash(password, 10);
+  const salt = await bcrypt.genSalt(10);
+  const hashedPassword = await bcrypt.hash(password, salt);
   try {
     const user = await User.create({ username, password: hashedPassword });
     res.status(201).send(`${user} registered`);

@@ -10,7 +10,7 @@ const authenticateToken = (req, res, next) => {
         if (err) return res.sendStatus(403);
         req.userId = payload?.userId;
         req.username = payload?.username;
-        // todo req.role = payload?.role;
+        req.role = payload?.role;
 
         next();
     });

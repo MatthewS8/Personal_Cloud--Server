@@ -3,3 +3,4 @@ client/node_modules/*
 *.pem
 *.key
 uploads/*
+postgres_data/*
