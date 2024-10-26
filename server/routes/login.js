@@ -4,7 +4,7 @@ const router = express.Router();
 const bcrypt = require('bcryptjs');
 const User = require('../models/user');
 const { where } = require('sequelize');
-const { ACCESS_TOKEN_SECRET } = require('../config/config');
+const { ACCESS_TOKEN_SECRET, PUBLIC_RSA_KEY } = require('../config/config');
 
 const tokens = new Map();
 router.post('/', async (req, res) => {
@@ -26,7 +26,7 @@ router.post('/', async (req, res) => {
         }
         const token = jwt.sign(payload, ACCESS_TOKEN_SECRET, {expiresIn: '15m'});
         tokens.set(user.id, payload);
-        res.send({ token });
+        res.send({ token, public_key: PUBLIC_RSA_KEY });
     } catch (err) {
         console.error(err);
         res.status(500).send('Error logging in');

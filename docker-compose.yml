@@ -1,4 +1,4 @@
-version: '3'
+version: "3"
 services:
   nodejs:
     build: ./server
@@ -7,13 +7,16 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      redis:
+        condition: service_started
     environment:
-      - NODE_ENV=development
-      - DB_HOST=postgres
-      - DB_USER=root
-      - DB_PASSWORD=dba
-      - DB_NAME=cloudDB
-      - DB_PORT=5432
+      - NODE_ENV=${NODE_ENV}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - DB_HOST=${DB_HOST}
+      - DB_USER=${DB_USER}
+      - DB_PASSWORD=${DB_PASSWORD}
+      - DB_NAME=${DB_NAME}
+      - DB_PORT=${DB_PORT}
     volumes:
       - ./uploads:/app/uploads
     command: >
@@ -26,19 +29,18 @@ services:
   postgres:
     image: postgres:latest
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: dba
-      POSTGRES_DB: cloudDB
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
     ports:
-      - "5432:5432"
+      - "${DB_PORT}:${DB_PORT}"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U root -d cloudDB"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
       interval: 10s
       timeout: 5s
       retries: 5
-
 
   nginx:
     build: ./nginx
@@ -47,3 +49,13 @@ services:
       - "443:443"
     depends_on:
       - nodejs
+
+  redis:
+    build: ./redis
+    privileged: true
+    ports:
+      - "6379:6379"
+    environment:
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+    cap_add:
+      - SYS_ADMIN

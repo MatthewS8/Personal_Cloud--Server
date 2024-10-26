@@ -1,6 +1,7 @@
 server/node_modules/*
-client/node_modules/*
+client/*
 *.pem
 *.key
 uploads/*
 postgres_data/*
+.env
