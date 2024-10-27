@@ -12,19 +12,15 @@ router.post("/session-key", authenticateToken, async (req, res) => {
   try {
     const { userId } = req;
     const { sessionKey } = req.body;
-    const buffer = Buffer.from(sessionKey, "base64");
 
-    const decryptedSessionKey = crypto
-      .privateDecrypt(
-        {
-          key: PRIVATE_RSA_KEY,
-          padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-          oaepHash: "sha256",
-        },
-        buffer
-      )
-      .toString("utf-8");
-      console.log("decryptedSessionKey ", decryptedSessionKey);
+    const decryptedSessionKey = crypto.privateDecrypt(
+      {
+        key: PRIVATE_RSA_KEY,
+        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+        oaepHash: "sha256",
+      },
+      Buffer.from(sessionKey, "base64")
+    ).toString("base64");
 
     const redisClient = await getRedisClient();
 

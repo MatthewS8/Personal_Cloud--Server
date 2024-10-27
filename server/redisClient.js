@@ -22,8 +22,6 @@ async function getRedisClient() {
     });
 
     await redisClient.connect();
-  } else {
-    console.log('Using existing Redis client');
   }
 
   return redisClient;

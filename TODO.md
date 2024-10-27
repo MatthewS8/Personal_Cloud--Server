@@ -7,4 +7,5 @@
  - Gestire la migration direttamente nel server. Quando avvii i container per la prima volta e non esiste un db,
   viene lanciato prima il comando di migrazione e poi il server e quindi il db non esiste. Trovata una soluzione temporanea e poco elegante 
   che pero' fallisce visto che la colonna esiste gia e non prosegue con i seed
+ - Handle chunk for big files like videos
 

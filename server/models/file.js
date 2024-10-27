@@ -11,7 +11,7 @@ const File = sequelize.define('File', {
     fileName: {
         type: DataTypes.STRING,
         allowNull: false,
-        unique: true,
+        unique: false,
     },
     uuid: {
         type: DataTypes.UUID,
