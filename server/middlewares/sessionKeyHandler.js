@@ -1,23 +1,9 @@
 const crypto = require("crypto");
 
-const getRedisClient = require('../redisClient');
+const getRedisClient = require("../redisClient");
 
-async function decryptData(encryptedData, key) {
-  const ivArray = new Uint8Array(encryptedData.iv);
-  const encryptedArray = new Uint8Array(encryptedData.encrypted);
-
-  console.log("pre decrypt");
-  const decrypted = await crypto.subtle.decrypt(
-    {
-      name: 'AES-GCM',
-      iv: ivArray
-    },
-    key,
-    encryptedArray
-  );
-  console.log("post decrypt");
-  return new Uint8Array(decrypted);
-}
+// TODO: This middleware can be the point where I get the key from
+// the redis store and add it to the req as CryptoKey
 
 const encryptDataWithSessionKey = async (req, res, next) => {
   try {
@@ -28,12 +14,12 @@ const encryptDataWithSessionKey = async (req, res, next) => {
       return res.status(400).json({ message: "Session key not found" });
     }
     req.encrypt = (data) => {
-      const cipher = crypto.createCipher('aes-256-cbc', sessionKey);
-      let encrypted = cipher.update(data, 'utf8', 'hex');
-      encrypted += cipher.final('hex');
+      const cipher = crypto.createCipher("aes-256-cbc", sessionKey);
+      let encrypted = cipher.update(data, "utf8", "hex");
+      encrypted += cipher.final("hex");
       return encrypted;
     };
-   
+
     next();
   } catch (error) {
     console.error("Error encrypting data:", error);
@@ -41,11 +27,6 @@ const encryptDataWithSessionKey = async (req, res, next) => {
   }
 };
 
-const decryptDataWithSessionKey = async (req, res, next) => {
-  
-};
-
 module.exports = {
   encryptDataWithSessionKey,
-  decryptDataWithSessionKey,
 };

@@ -4,7 +4,6 @@ const File = require("../models/file");
 const fs = require("fs");
 
 const authenticateToken = require("../middlewares/authenticatorHandler");
-const { encryptDataWithSessionKey } = require('../middlewares/sessionKeyHandler');
 
 router.get("/", authenticateToken, async (req, res) => {
   try {
@@ -14,6 +13,7 @@ router.get("/", authenticateToken, async (req, res) => {
       res.json({});
     } else {
       console.log("Found these files");
+      // FIXME - This is a security issue. We should not be sending the file path to the client.
       res.json(fileList);
     }
   } catch (err) {
@@ -22,27 +22,35 @@ router.get("/", authenticateToken, async (req, res) => {
   }
 });
 
-router.get("/download/:uuid", authenticateToken, encryptDataWithSessionKey, async (req, res) => {
+router.get("/download/:uuid", authenticateToken, async (req, res) => {
   try {
     const file = await File.findOne({
       where: { uuid: req.params.uuid, ownerId: req.userId },
     });
 
     if (!file) {
-      return res.status(404).json({error: "File not found"});
+      return res.status(404).json({ error: "File not found" });
     }
 
     const filePath = file.filePath;
     const fileName = file.fileName;
-    const fileData = fs.readFileSync(filePath, 'utf8');
-    const encryptedData = req.encrypt(fileData);
+    const fileData = fs.readFileSync(filePath, "utf8");
 
-    res.setHeader('Content-Disposition', `attachment; filename-${fileName}`);
-    res.setHeader('Content-Type', 'application/octet-stream');
-    res.send(encryptedData);
+    // TODO: Encrypt the file data
+    const encryptedData = fileData;
+
+    res.setHeader("Content-Disposition", `attachment; filename-${fileName}`);
+    res.setHeader("Content-Type", "image/jpg");
+    // res.send(encryptedData);
+    // res.setHeader(
+    //   "Content-Disposition",
+    //   `attachment; filename=${file.fileName}`
+    // );
+    const fileStream = fs.createReadStream(filePath);
+    fileStream.pipe(res);
   } catch (err) {
     console.error("Error downloading file: ", err);
-    res.status(500).json({error: "Error downloading file"});
+    res.status(500).json({ error: "Error downloading file" });
   }
 });
 
