@@ -12,7 +12,6 @@ router.get("/", authenticateToken, async (req, res) => {
     if (fileList.length === 0) {
       res.json({});
     } else {
-      console.log("Found these files");
       // FIXME - This is a security issue. We should not be sending the file path to the client.
       res.json(fileList);
     }
@@ -40,7 +39,7 @@ router.get("/download/:uuid", authenticateToken, async (req, res) => {
     const encryptedData = fileData;
 
     res.setHeader("Content-Disposition", `attachment; filename-${fileName}`);
-    res.setHeader("Content-Type", "image/jpg");
+    res.setHeader("Content-Type", file.type);
     // res.send(encryptedData);
     // res.setHeader(
     //   "Content-Disposition",

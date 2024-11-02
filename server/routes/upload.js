@@ -46,7 +46,6 @@ router.post(
   async (req, res) => {
     try {
       const { userId, files } = req;
-      console.log("req", req);
       if (!files || files.length === 0) {
         return res.status(400).json({ message: "No files uploaded" });
       }
@@ -73,11 +72,13 @@ router.post(
           const decryptedData = await decryptData(encryptedData, key);
           // TODO: Remove the pako.inflate
           file.buffer = Buffer.from(pako.inflate(Buffer.from(decryptedData)));
+          file.fileType = encryptedData.fileType;
+          file.lastModified = new Date(encryptedData.lastModified);
 
           return file;
         })
       );
-      const uploadedFiles = await Promise.all(
+      await Promise.all(
         decryptedFiles.map(async (file) => {
           const fileUUID = uuidv4();
           const filePath = path.join(
@@ -91,7 +92,9 @@ router.post(
             fileName: file.originalname,
             uuid: fileUUID,
             filePath: filePath,
-            createdAt: file.createdAt,
+            size: file.size,
+            type: file.fileType,
+            createdAt: file.lastModified,
             ownerId: req.userId,
           });
           await fs.promises.writeFile(filePath, file.buffer);

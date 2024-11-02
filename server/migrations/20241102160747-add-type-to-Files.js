@@ -4,18 +4,18 @@
 module.exports = {
   async up(queryInterface, Sequelize) {
     const columnExists = await queryInterface.sequelize.query(
-      "SELECT * FROM information_schema.columns WHERE table_name='Users' AND column_name='role';"
+      "SELECT * FROM information_schema.columns WHERE table_name='Files' AND column_name='type';"
     );
     if (columnExists[0].length === 0) {
-      await queryInterface.addColumn("Users", "role", {
+      await queryInterface.addColumn("Files", "type", {
         type: Sequelize.STRING,
         allowNull: false,
-        defaultValue: "user",
+        defaultValue: "image/jpeg",
       });
     }
   },
 
   async down(queryInterface, Sequelize) {
-    await queryInterface.removeColumn("Users", "role");
+    await queryInterface.removeColumn("Files", "type");
   },
 };
