@@ -1,6 +1,6 @@
 const crypto = require("crypto");
 
-const getRedisClient = require("../redisClient");
+const getRedisClient = require("../utils/redisClient");
 
 // TODO: This middleware can be the point where I get the key from
 // the redis store and add it to the req as CryptoKey

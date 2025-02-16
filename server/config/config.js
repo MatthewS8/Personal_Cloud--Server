@@ -4,7 +4,9 @@ const ACCESS_TOKEN_SECRET = fs.readFileSync("./server.key").toString();
 const PUBLIC_RSA_KEY = fs.readFileSync("./public_key.pem").toString();
 
 // create private key
-const privateKeyFromFs = fs.readFileSync("./private_rsa_key.pem").toString("utf-8");
+const privateKeyFromFs = fs
+  .readFileSync("./private_rsa_key.pem")
+  .toString("utf-8");
 const pemHeader = "-----BEGIN PRIVATE KEY-----";
 const pemFooter = "-----END PRIVATE KEY-----";
 const pemContents = privateKeyFromFs.substring(
@@ -21,10 +23,13 @@ const PRIVATE_RSA_KEY = crypto.createPrivateKey({
   type: "pkcs8",
 });
 
+const STORAGE_KEY = fs.readFileSync("server_file.key");
+
 module.exports = {
   ACCESS_TOKEN_SECRET,
   PUBLIC_RSA_KEY,
   PRIVATE_RSA_KEY,
+  STORAGE_KEY,
   development: {
     username: process.env.DB_USER,
     password: process.env.DB_PASSWORD,

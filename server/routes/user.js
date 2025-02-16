@@ -3,7 +3,7 @@ const bcrypt = require("bcryptjs");
 const User = require("../models/user");
 const crypto = require("crypto");
 const { PRIVATE_RSA_KEY } = require("../config/config");
-const getRedisClient = require("../redisClient");
+const getRedisClient = require("../utils/redisClient");
 
 const router = express.Router();
 const authenticateToken = require("../middlewares/authenticatorHandler");
@@ -13,14 +13,16 @@ router.post("/session-key", authenticateToken, async (req, res) => {
     const { userId } = req;
     const { sessionKey } = req.body;
 
-    const decryptedSessionKey = crypto.privateDecrypt(
-      {
-        key: PRIVATE_RSA_KEY,
-        padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
-        oaepHash: "sha256",
-      },
-      Buffer.from(sessionKey, "base64")
-    ).toString("base64");
+    const decryptedSessionKey = crypto
+      .privateDecrypt(
+        {
+          key: PRIVATE_RSA_KEY,
+          padding: crypto.constants.RSA_PKCS1_OAEP_PADDING,
+          oaepHash: "sha256",
+        },
+        Buffer.from(sessionKey, "base64")
+      )
+      .toString("base64");
 
     const redisClient = await getRedisClient();
 

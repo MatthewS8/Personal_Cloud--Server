@@ -6,38 +6,18 @@ const authenticateToken = require("../middlewares/authenticatorHandler");
 const File = require("../models/file");
 const fs = require("fs");
 const pako = require("pako");
-
 const router = express.Router();
 
 const storage = multer.memoryStorage();
 const upload = multer({ storage });
 
-const getRedisClient = require("../redisClient");
-
-async function decryptData(encryptedData, key) {
-  const ivArray = new Uint8Array(encryptedData.iv);
-  const encryptedArray = Uint8Array.from(
-    atob(encryptedData.encrypted)
-      .split("")
-      .map((char) => char.charCodeAt(0))
-  );
-
-  try {
-    const decrypted = await crypto.subtle.decrypt(
-      {
-        name: "AES-GCM",
-        iv: ivArray,
-      },
-      key,
-      encryptedArray
-    );
-
-    return new Uint8Array(decrypted);
-  } catch (error) {
-    console.error("Error decrypting data:", error);
-    throw error;
-  }
-}
+const getRedisClient = require("../utils/redisClient");
+const {
+  chunkedDecryptEncrypt,
+  decryptData,
+  encryptData,
+  getServerKey,
+} = require("../utils/cryptoUtilities");
 
 router.post(
   "/upload",
@@ -63,15 +43,21 @@ router.post(
         rawKey,
         "AES-GCM",
         true,
-        ["decrypt"]
+        ["encrypt", "decrypt"]
       );
 
       const decryptedFiles = await Promise.all(
         files.map(async (file) => {
           const encryptedData = JSON.parse(file.buffer.toString("utf8"));
-          const decryptedData = await decryptData(encryptedData, key);
-          // TODO: Remove the pako.inflate
-          file.buffer = Buffer.from(pako.inflate(Buffer.from(decryptedData)));
+          const reEncryptedData = await chunkedDecryptEncrypt(
+            encryptedData,
+            key,
+            key
+          );
+          // const decryptedData = await decryptData(encryptedData, key);
+          // const reEncryptedData = await encryptData(decryptedData, key);
+          file.buffer = Buffer.from(JSON.stringify(reEncryptedData));
+
           file.fileType = encryptedData.fileType;
           file.lastModified = new Date(encryptedData.lastModified);
 
@@ -105,47 +91,110 @@ router.post(
       res.status(201).json({ message: "Files uploaded successfully" });
     } catch (error) {
       console.error("Error decrypting data:", error);
-      res.status(500).send("Error decypting files");
+      res.status(500).send("Error decrypting files");
     }
   }
 );
-// router.post('/upload-folder', authenticateToken, upload.single('folder'), async (req, res) => {
-//     try {
-//         const { file } = req;
-//         if (!file) {
-//             return res.status(400).json({ message: 'No folder uploaded' });
-//         }
 
-//         const folderUUID = uuidv4();
-//         const folderPath = path.join(__dirname, '..', 'uploads', folderUUID);
+const uploadChunks = multer({ storage: multer.memoryStorage() });
+router.post(
+  "/upload-chunk",
+  authenticateToken,
+  uploadChunks.none(),
+  async (req, res) => {
+    try {
+      const {
+        iv,
+        encrypted,
+        originalSize,
+        fileId,
+        chunkIndex,
+        totalChunks,
+        fileName,
+        fileType,
+        lastModified,
+      } = req.body;
 
-//         fs.mkdirSync(folderPath);
+      const { userId, username } = req;
+      // redis
+      const redisClient = await getRedisClient();
+      const sessionKey = await redisClient.hGet(`user:${userId}`, "sessionKey");
+      if (!sessionKey) {
+        return res.status(401).json({ message: "Session key not found" });
+      }
+      const rawKey = Uint8Array.from(atob(Buffer.from(sessionKey)), (c) =>
+        c.charCodeAt(0)
+      );
+      const key = await crypto.subtle.importKey(
+        "raw",
+        rawKey,
+        "AES-GCM",
+        true,
+        ["encrypt", "decrypt"]
+      );
+      const parsedIv = new Uint8Array(JSON.parse(iv));
+      const decryptedData = await decryptData(parsedIv, encrypted, key);
+      const serverKey = await getServerKey();
+      const { iv: serverIv, encrypted: serverEncrypted } = await encryptData(
+        decryptedData,
+        serverKey
+      );
+      const tempDir = path.join(__dirname, "temp", username, fileId);
+      if (!fs.existsSync(tempDir)) {
+        fs.mkdirSync(tempDir, { recursive: true });
+      }
+      const chunkPath = path.join(tempDir, `chunk_${chunkIndex}`);
+      fs.writeFileSync(
+        chunkPath,
+        JSON.stringify({ iv: serverIv, encrypted: serverEncrypted })
+      );
+      if (parseInt(chunkIndex, 10) === totalChunks - 1) {
+        const outputFile = path.join(
+          __dirname,
+          "..",
+          "uploads",
+          `${username}`,
+          `${fileName}.bin`
+        );
+        const chunks = fs.readdirSync(tempDir).sort((a, b) => {
+          const indexA = parseInt(a.split("_")[1]);
+          const indexB = parseInt(b.split("_")[1]);
+          return indexA - indexB;
+        });
+        const writeStream = fs.createWriteStream(outputFile);
+        chunks.forEach((chunk, index) => {
+          const chunkPath = path.join(tempDir, chunk);
+          const chunkData = fs.readFileSync(chunkPath);
+          writeStream.write(chunkData);
+        });
+        writeStream.end();
+        writeStream.on("finish", async () => {
+          const fileUUID = uuidv4();
+          const newFile = await File.create({
+            fileName: fileName,
+            uuid: fileUUID,
+            filePath: outputFile,
+            size: originalSize,
+            type: fileType,
+            createdAt: Date.parse(lastModified),
+            ownerId: userId,
+          });
+          fs.rmdirSync(tempDir, { recursive: true });
+          res.status(200).send({
+            status: "File assembled successfully",
+            filePath: outputFile,
+          });
+        });
+      } else {
+        res.status(200).send({ status: "Chunk received" });
+      }
+    } catch (error) {
+      console.error("Error uploading chunk:", error);
+      res
+        .status(500)
+        .send({ status: "Error uploading chunk", error: error.message });
+    }
+  }
+);
 
-//         const zip = new archiver('zip', {
-//             zlib: { level: 9 }
-//         });
-
-//         zip.on('error', (err) => {
-//             throw err;
-//         });
-
-//         const output = fs.createWriteStream(path.join(folderPath, 'folder.zip'));
-//         zip.pipe(output);
-//         zip.directory(file.path, false);
-//         await zip.finalize();
-
-//         const newFolder = await File.create({
-//             fileName: file.originalname,
-//             uuid: folderUUID,
-//             filePath: folderPath,
-//             createdAt: new Date(),
-//             ownerId: req.userId
-//         });
-
-//         res.status(201).json({ message: 'Folder uploaded successfully', folder: newFolder });
-//     } catch (error) {
-//         console.error(error);
-//         res.status(500).send('Server error');
-//     }
-// });
 module.exports = router;
