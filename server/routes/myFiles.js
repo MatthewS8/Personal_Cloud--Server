@@ -2,8 +2,10 @@ const express = require("express");
 const router = express.Router();
 const File = require("../models/file");
 const fs = require("fs");
+const stream = require("stream");
+const { pipeline } = require("stream");
 const { promisify } = require("util");
-const pipeline = promisify(require("stream").pipeline);
+const pipelineAsync = promisify(pipeline);
 
 const getRedisClient = require("../utils/redisClient");
 
@@ -50,6 +52,7 @@ router.get("/download/:uuid", authenticateToken, async (req, res) => {
     if (!sessionKey) {
       return res.status(401).json({ message: "Session key not found" });
     }
+
     const rawKey = Uint8Array.from(atob(Buffer.from(sessionKey)), (c) =>
       c.charCodeAt(0)
     );
@@ -60,7 +63,6 @@ router.get("/download/:uuid", authenticateToken, async (req, res) => {
 
     const filePath = file.filePath;
     const fileName = file.fileName;
-    console.log(" received request for ", fileName);
     const readStream = fs.createReadStream(filePath, {
       highWaterMark: CHUNK_SIZE,
     });
@@ -74,19 +76,41 @@ router.get("/download/:uuid", authenticateToken, async (req, res) => {
     const serverKey = await getServerKey();
     let acc = "";
     let lastChunk = "";
+    let chunkCount = 0;
 
-    readStream
-      .on("data", async (chunk) => {
+    const transformStream = new stream.Transform({
+      async transform(chunk, encoding, callback) {
         acc += chunk.toString("utf8");
         let boundary = acc.indexOf("}");
         while (boundary > 0) {
-          if (!readStream.isPaused()) {
-            readStream.pause();
-          }
           lastChunk = acc.substring(0, boundary + 1);
           acc = acc.substring(boundary + 1);
           boundary = acc.indexOf("}");
           const encryptedChunk = JSON.parse(lastChunk);
+          try {
+            chunkCount += 1;
+            const decryptedData = await decryptData(
+              new Uint8Array(encryptedChunk.iv),
+              encryptedChunk.encrypted,
+              serverKey
+            );
+            const { iv, encrypted } = await encryptData(
+              decryptedData,
+              key,
+              null
+            );
+            const response = JSON.stringify({ iv: iv, encrypted: encrypted });
+            this.push(response);
+          } catch (error) {
+            callback(new Error("Error processing chunk"));
+            return;
+          }
+        }
+        callback();
+      },
+      async flush(callback) {
+        if (acc.length > 0) {
+          const encryptedChunk = JSON.parse(acc);
           try {
             const decryptedData = await decryptData(
               new Uint8Array(encryptedChunk.iv),
@@ -99,30 +123,17 @@ router.get("/download/:uuid", authenticateToken, async (req, res) => {
               null
             );
             const response = JSON.stringify({ iv: iv, encrypted: encrypted });
-            res.write(response);
+            this.push(response);
           } catch (error) {
-            console.error("Error processing chunk:", error);
-            res.status(500).json({ error: "Error processing file" });
-            readStream.destroy();
+            callback(new Error("Error processing last chunk"));
             return;
           }
         }
-        if (readStream.isPaused()) {
-          readStream.resume();
-        }
-      })
-      .on("end", () => {
-        if (!res.writableEnded) {
-          res.end();
-        }
-      })
-      .on("close", () => {
-        console.log("Stream closed");
-      })
-      .on("error", (err) => {
-        console.error("Error reading file: ", err);
-        res.status(500).json({ error: "Error reading file" });
-      });
+        callback();
+      },
+    });
+
+    await pipelineAsync(readStream, transformStream, res);
   } catch (err) {
     console.error("Error downloading file: ", err);
     res.status(500).json({ error: "Error downloading file" });

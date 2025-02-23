@@ -30,7 +30,6 @@ async function encryptData(data, key, iv) {
   if (!iv) {
     iv = crypto.getRandomValues(new Uint8Array(12));
   }
-  console.log("data length", data.length);
 
   try {
     const encrypted = await crypto.subtle.encrypt(
