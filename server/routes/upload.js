@@ -107,7 +107,6 @@ router.post(
         iv,
         encrypted,
         originalSize,
-        fileId,
         chunkIndex,
         totalChunks,
         fileName,
@@ -116,6 +115,7 @@ router.post(
       } = req.body;
 
       const { userId, username } = req;
+
       // redis
       const redisClient = await getRedisClient();
       const sessionKey = await redisClient.hGet(`user:${userId}`, "sessionKey");
@@ -139,7 +139,7 @@ router.post(
         decryptedData,
         serverKey
       );
-      const tempDir = path.join(__dirname, "temp", username, fileId);
+      const tempDir = path.join(__dirname, "temp", username, fileName);
       if (!fs.existsSync(tempDir)) {
         fs.mkdirSync(tempDir, { recursive: true });
       }
@@ -148,7 +148,13 @@ router.post(
         chunkPath,
         JSON.stringify({ iv: serverIv, encrypted: serverEncrypted })
       );
-      if (parseInt(chunkIndex, 10) === totalChunks - 1) {
+      await redisClient.hSet(
+        `${userId}:${fileName}`,
+        `${chunkIndex}`,
+        "received"
+      );
+      const receivedChunks = await redisClient.hGetAll(`${userId}:${fileName}`);
+      if (Object.keys(receivedChunks).length === Number(totalChunks)) {
         const outputFile = path.join(
           __dirname,
           "..",
@@ -179,7 +185,15 @@ router.post(
             createdAt: Date.parse(lastModified),
             ownerId: userId,
           });
-          fs.rmdirSync(tempDir, { recursive: true });
+          try {
+            fs.rmSync(tempDir, { recursive: true, force: true });
+          } catch (error) {
+            console.error("Error deleting temp dir:", error);
+            res
+              .status(500)
+              .send({ status: "Error uploading chunk", error: error.message });
+          }
+          await redisClient.del(`${userId}:${fileName}`);
           res.status(200).send({
             status: "File assembled successfully",
             filePath: outputFile,
@@ -196,5 +210,4 @@ router.post(
     }
   }
 );
-
 module.exports = router;
