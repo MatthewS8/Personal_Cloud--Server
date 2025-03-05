@@ -1,11 +1,11 @@
 const fs = require("fs");
 const crypto = require("crypto");
-const ACCESS_TOKEN_SECRET = fs.readFileSync("./server.key").toString();
-const PUBLIC_RSA_KEY = fs.readFileSync("./public_key.pem").toString();
+const ACCESS_TOKEN_SECRET = fs.readFileSync("./certificates/ATSecret.pem").toString();
+const PUBLIC_RSA_KEY = fs.readFileSync("./certificates/public_key.pem").toString();
 
 // create private key
 const privateKeyFromFs = fs
-  .readFileSync("./private_rsa_key.pem")
+  .readFileSync("./certificates/private_rsa_key.key")
   .toString("utf-8");
 const pemHeader = "-----BEGIN PRIVATE KEY-----";
 const pemFooter = "-----END PRIVATE KEY-----";
@@ -23,7 +23,7 @@ const PRIVATE_RSA_KEY = crypto.createPrivateKey({
   type: "pkcs8",
 });
 
-const STORAGE_KEY = fs.readFileSync("server_file.key");
+const STORAGE_KEY = fs.readFileSync("./certificates/storage.pem");
 
 module.exports = {
   ACCESS_TOKEN_SECRET,
