@@ -57,6 +57,8 @@ Before the initial startup, please ensure that all necessary encryption keys are
 - `private_rsa_key.key` (RSA): This private RSA key is used for decrypting data received from clients.
 - `storage.pem` (AES): This key is used to securely encrypt and store data within the server's storage system.
 
+Instructions on how to generate these keys can be found in the [Key Generation Guide](./server/docs/Key_Generation_Guide.md).
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](./LICENSE) file for details.
