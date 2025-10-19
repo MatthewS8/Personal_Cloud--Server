@@ -1,7 +1,7 @@
 const express = require("express");
 const multer = require("multer");
 const path = require("path");
-const { v4: uuidv4 } = require("uuid");
+const { randomUUID } = require("node:crypto");
 const authenticateToken = require("../middlewares/authenticatorHandler");
 const File = require("../models/file");
 const fs = require("fs");
@@ -66,7 +66,7 @@ router.post(
       );
       await Promise.all(
         decryptedFiles.map(async (file) => {
-          const fileUUID = uuidv4();
+          const fileUUID = randomUUID();
           const filePath = path.join(
             __dirname,
             "..",
@@ -175,7 +175,7 @@ router.post(
         });
         writeStream.end();
         writeStream.on("finish", async () => {
-          const fileUUID = uuidv4();
+          const fileUUID = randomUUID();
           const newFile = await File.create({
             fileName: fileName,
             uuid: fileUUID,

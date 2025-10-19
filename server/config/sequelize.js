@@ -1,12 +1,16 @@
-const { Sequelize } = require('sequelize');
-const config = require('./config.js')[process.env.NODE_ENV || 'development'];
+const { Sequelize } = require("sequelize");
+const config = require("./config.js")[process.env.NODE_ENV || "development"];
 
-
-console.log('Creating sequelize instance');
-const sequelize = new Sequelize(config.database, config.username, config.password, {
-  host: config.host,
-  dialect: config.dialect,
-});
+console.log("Creating sequelize instance");
+const sequelize = new Sequelize(
+  config.database,
+  config.username,
+  config.password,
+  {
+    host: config.host,
+    dialect: config.dialect,
+  }
+);
 // // Umzug setup for migrations and seeders
 // const umzugMigrations = new Umzug({
 //   migrations: {
@@ -37,7 +41,7 @@ const sequelize = new Sequelize(config.database, config.username, config.passwor
 
 //     await umzugSeeders.up();
 //     console.log('Seeders applied successfully.');
-    
+
 //   } catch (err) {
 //     console.error('Error during migration/seed:', err);
 //     process.exit(1);
